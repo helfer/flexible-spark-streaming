@@ -60,3 +60,14 @@ this system, which will have only the following parts:
 
 I suggest we implement it in python, because we're all familiar with that and it
 will allow us to use the python shell to play around and submit queries with.
+
+
+Once we have the basic system wired up, there's plenty more we could do:
+
+* Support more complex queries and build an actual parser for our syntax
+* Do more optimizations in the scheduler
+* Make the scheduler optimize even when queries come and go asynchronously
+ make the system write the output to MongoDB and use Meteor to keep clients
+updated when new results come in.
+* automatically add new nodes to the cluster if utilization exceeds a threshold.
+* etc.
