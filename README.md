@@ -86,3 +86,11 @@ the filter. If everything is running fine, you can get rid of the error messages
 by appending `2> /dev/null` to the command above. There's also a settings file
 somewhere that we could modify. If you find that, please write it here.
 
+
+## Next steps
+
+* Figure out how to get tweets and write them into files. This might help: https://databricks.gitbooks.io/databricks-spark-reference-applications/content/twitter_classifier/collect.html
+* Make the scheduler into a standalone process that communicates with the query parser and the dirwatcher.
+* Define our query language
+* Define the API for query parser so our webserver will be able to register queries and get results.
+* Implement scan sharing for queries with filters over a common range
