@@ -71,3 +71,18 @@ Once we have the basic system wired up, there's plenty more we could do:
 updated when new results come in.
 * automatically add new nodes to the cluster if utilization exceeds a threshold.
 * etc.
+
+
+## Running the code
+
+Right now, our code doesn't do much. It just wired up some components and runs a
+dummy query on a single file. To run it, all you have to do is to make sure that
+the spark/bin directory is in your OS's PATH variable. Then run the following:
+
+    > spark-submit scheduler.py sample-data/tweets.txt
+
+It should say somewhere in the flurry of log messages that two tweets matched
+the filter. If everything is running fine, you can get rid of the error messages
+by appending `2> /dev/null` to the command above. There's also a settings file
+somewhere that we could modify. If you find that, please write it here.
+
