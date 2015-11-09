@@ -1,5 +1,5 @@
+Third test file
 This is one tweet with no tags
-This tweet contains the tag #test
-This tweet contains another tag #spark
+This tweet contains another tag #anothertag
 This tweet is also a test #test
 Some people write other stuff
