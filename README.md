@@ -75,7 +75,8 @@ updated when new results come in.
 
 ## Setup
 
-First, download and install Spark. Then, download and install Python 2.7.9. If
+First, download and install Spark. Then, download and install Python 2.7.9. The
+Tweepy Python module relies on Python 2.7.9 for improved security measures. If
 your system relies on an older version of Python (Ubuntu 14.04LTS uses Python
 2.7.6), we recommend using virtualenv to setup a sandboxed environment (see
 below). Finally, download and install the Tweepy Python module.
@@ -85,10 +86,10 @@ below). Finally, download and install the Tweepy Python module.
 
 You can install virtualenv on Ubuntu by running `pip install virtualenv`. Then,
 download and install Python 2.7.9 to a specified directory so that it doesn't
-interfere with your system's current Python installation (e.g. /usr/local/lib/
-python2.7.9). Within the source code directory of this repository, create a
-virtual environment by running `virtualenv -p /path/to/your/python2.7.9/
-interpreter venv`. For example:
+interfere with your system's current Python installation (e.g.
+/usr/local/lib/python2.7.9). Within the source code directory of this repository,
+create a virtual environment by running `virtualenv -p
+/path/to/your/python2.7.9/interpreter venv`. For example:
 
     > virtualenv -p /usr/local/lib/python2.7.9/bin/python venv
 
@@ -96,15 +97,14 @@ This will create a virtual environment called venv within your source code
 directory. You can activate the sandbox by running `source venv/bin/activate`.
 Lastly, download and install the Tweepy module within your sandbox.
 
+To deactivate the sandbox, simply run `deactivate`.
+
 
 ## Running the code
 
 Right now, our code runs a dummy query on a stream of tweets using Twitter's
 streaming API. To run it, you must have Twitter API credentials and the Tweepy
-Python module installed on your machine. Please note that Tweepy requires Python
-2.7.9. If your system requires an older version of Python (Ubuntu 14.04LTS uses
-Python 2.7.6), we recommend using virtualenv to setup a sandboxed environment.
-For instructions on how to setup the virtualenv environment, see [Setup](#setup).
+Python module installed on your machine. For setup instructions, see [Setup](#setup).
 Then, all you have to do is to make sure that the spark/bin directory is in your
 OS's PATH variable. Then run the following:
 
