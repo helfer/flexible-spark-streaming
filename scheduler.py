@@ -5,6 +5,7 @@ import re
 import signal
 import sys
 import time
+import argparse
 
 from collections import deque
 from operator import add
@@ -13,6 +14,7 @@ from pyspark import SparkContext
 
 from queryparser.Query import Query
 from dirwatcher.dirwatcher import DirWatcher
+from twitterstream.twitterstream import TwitterStream
 
 # The scheduler runs synchronosuly for now. It should become its own process which receives signals from the
 # dirwatcher and the queryparser. The queryparser will be responsible for registering and unregistering
@@ -20,9 +22,42 @@ from dirwatcher.dirwatcher import DirWatcher
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: scheduler <dir to watch>", file=sys.stderr)
-        exit(-1)
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+              "watch_dir",
+              help="the directory where new tweet files will be added")
+    parser.add_argument(
+              "consumer_key",
+              help="Twitter API key")
+    parser.add_argument(
+              "consumer_secret",
+              help="Twitter API secret")
+    parser.add_argument(
+              "access_key",
+              help="Twitter API access token")
+    parser.add_argument(
+              "access_secret",
+              help="Twitter API access token secret")
+    parser.add_argument(
+              "-p", "--prefix",
+              help="prefix for tweet file names, default=tweets",
+              default="tweets")
+    parser.add_argument(
+              "-s", "--suffix",
+              help="suffix for tweet files, default=txt",
+              default="txt")
+    parser.add_argument(
+              "-w", "--window",
+              type=int,
+              help="the window size (in ms) for reading tweets, default=10000",
+              default=10000)
+    args = parser.parse_args()
+
+    # normalize the path syntax
+    if args.watch_dir[-1] != '/':
+        args.watch_dir += '/'
+
+    print("pwd: " + os.getcwd())
 
     keep_going = True
 
@@ -39,6 +74,18 @@ if __name__ == "__main__":
     # Initialize the spark context.
     sc = SparkContext(appName="FlexibleStreaming")
 
+    print('start twitterstream')
+    ts = TwitterStream(
+             args.watch_dir,
+             args.consumer_key,
+             args.consumer_secret,
+             args.access_key,
+             args.access_secret,
+             args.prefix,
+             args.suffix,
+             args.window)
+    ts.start()
+
     # deque is thread-safe
     new_tweet_files = deque()
     def register_new_tweet_files(changes):
@@ -46,7 +93,7 @@ if __name__ == "__main__":
             new_tweet_files.extend(changes['added'])
 
     print('start dirwatcher')
-    dw = DirWatcher(sys.argv[1], register_new_tweet_files)
+    dw = DirWatcher(args.watch_dir, register_new_tweet_files)
     dw.start()
 
     # dummy parse tweet method:
@@ -81,5 +128,6 @@ if __name__ == "__main__":
         time.sleep(0.5)
 
     dw.stop()
+    ts.stop()
     sc.stop()
     print('Stopped')
