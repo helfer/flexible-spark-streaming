@@ -51,22 +51,29 @@ if __name__ == "__main__":
               type=int,
               help="the window size (in ms) for reading tweets, default=10000",
               default=10000)
+    parser.add_argument(
+              "-v", "--verbose",
+              help="display more messages for debugging",
+              action="store_true")
     args = parser.parse_args()
 
     # normalize the path syntax
-    if args.watch_dir[-1] != '/':
-        args.watch_dir += '/'
+    if args.watch_dir[-1] != "/":
+        args.watch_dir += "/"
 
-    print("pwd: " + os.getcwd())
+    # if the watch directory does not exist, create it and clean it at the end.
+    if not os.path.exists(args.watch_dir):
+        print("creating " + args.watch_dir)
+        os.makedirs(args.watch_dir)
 
     keep_going = True
 
     # exit gracefully on stop
     # XXX doesn't actually work. signal handler never gets called... oh noes!
-    print('register signal-handler')
+    print("register signal-handler")
     def signal_handler(signal, frame):
         global keep_going
-        print('Stopping')
+        print("Stopping")
         keep_going = False
 
     signal.signal(signal.SIGINT, signal_handler)
@@ -74,7 +81,7 @@ if __name__ == "__main__":
     # Initialize the spark context.
     sc = SparkContext(appName="FlexibleStreaming")
 
-    print('start twitterstream')
+    print("start twitterstream")
     ts = TwitterStream(
              args.watch_dir,
              args.consumer_key,
@@ -83,7 +90,8 @@ if __name__ == "__main__":
              args.access_secret,
              args.prefix,
              args.suffix,
-             args.window)
+             args.window,
+             args.verbose)
     ts.start()
 
     # deque is thread-safe
@@ -92,7 +100,7 @@ if __name__ == "__main__":
         if changes['added']:
             new_tweet_files.extend(changes['added'])
 
-    print('start dirwatcher')
+    print("start dirwatcher")
     dw = DirWatcher(args.watch_dir, register_new_tweet_files)
     dw.start()
 
@@ -130,4 +138,5 @@ if __name__ == "__main__":
     dw.stop()
     ts.stop()
     sc.stop()
-    print('Stopped')
+    print("stopped")
+

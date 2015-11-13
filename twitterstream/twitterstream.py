@@ -1,4 +1,7 @@
 import os, time, json
+
+from collections import deque
+
 from threading import Thread
 from tweepy import Stream, OAuthHandler
 from tweepy.streaming import StreamListener
@@ -13,8 +16,12 @@ class TweetListener(StreamListener):
 
 
     def on_data(self, data):
-        print 'data'
-        self.writer.write(data)
+        vals = json.loads(data)
+        if 'text' in vals:
+            self.writer.write(vals['text'])
+        elif self.writer.verbose:
+            print 'No text key in data'
+
         return True 
 
 
@@ -32,7 +39,8 @@ class TwitterStream(StreamListener):
                  access_secret,
                  prefix = 'tweets',
                  suffix = 'txt',
-                 window = 10000):
+                 window = 10000,
+                 verbose = False):
         self.destpath = destpath
         self.consumer_key = consumer_key
         self.consumer_secret = consumer_secret
@@ -41,21 +49,26 @@ class TwitterStream(StreamListener):
         self.prefix = prefix
         self.suffix = suffix
         self.window = window
+        self.verbose = verbose
+        self.buf = deque()
         self.stopped = True
 
 
     # Write the tweet text to the current file. May throw an error if the file
     # is currently being switched out (i.e. writing at the end of a window).
-    def write(data):
-        try:
-            text = json.loads(data)['text']
-            self.file.write(text + '\n')
-        except ValueError:
-            print 'Error writing file.'
+    def write(self, text):
+        self.buf.appendleft(text)
 
 
     def run(self):
         while not self.stopped:
+            if len(self.buf) > 0:
+                try:
+                    self.f.write(self.buf.pop() + '\n')
+                except UnicodeEncodeError:
+                    if self.verbose:
+                        print 'Cannot encode non-unicode characters'
+
             if ((time.time() * 1000) - self.begin > self.window):
                 self.f.close()
                 self.begin = int(time.time() * 1000)
@@ -80,7 +93,7 @@ class TwitterStream(StreamListener):
                      '.' + self.suffix, 'w')
 
         # Start the threads
-        self.stream.firehose(async=True)
+        self.stream.sample(async=True)
         thread = Thread(target=self.run, args=())
         thread.start()
 

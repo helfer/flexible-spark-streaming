@@ -73,23 +73,56 @@ updated when new results come in.
 * etc.
 
 
+## Setup
+
+First, download and install Spark. Then, download and install Python 2.7.9. If
+your system relies on an older version of Python (Ubuntu 14.04LTS uses Python
+2.7.6), we recommend using virtualenv to setup a sandboxed environment (see
+below). Finally, download and install the Tweepy Python module.
+
+
+### Virtualenv setup
+
+You can install virtualenv on Ubuntu by running `pip install virtualenv`. Then,
+download and install Python 2.7.9 to a specified directory so that it doesn't
+interfere with your system's current Python installation (e.g. /usr/local/lib/
+python2.7.9). Within the source code directory of this repository, create a
+virtual environment by running `virtualenv -p /path/to/your/python2.7.9/
+interpreter venv`. For example:
+
+    > virtualenv -p /usr/local/lib/python2.7.9/bin/python venv
+
+This will create a virtual environment called venv within your source code
+directory. You can activate the sandbox by running `source venv/bin/activate`.
+Lastly, download and install the Tweepy module within your sandbox.
+
+
 ## Running the code
 
-Right now, our code doesn't do much. It just wired up some components and runs a
-dummy query on a single file. To run it, all you have to do is to make sure that
-the spark/bin directory is in your OS's PATH variable. Then run the following:
+Right now, our code runs a dummy query on a stream of tweets using Twitter's
+streaming API. To run it, you must have Twitter API credentials and the Tweepy
+Python module installed on your machine. Please note that Tweepy requires Python
+2.7.9. If your system requires an older version of Python (Ubuntu 14.04LTS uses
+Python 2.7.6), we recommend using virtualenv to setup a sandboxed environment.
+For instructions on how to setup the virtualenv environment, see [Setup](#setup).
+Then, all you have to do is to make sure that the spark/bin directory is in your
+OS's PATH variable. Then run the following:
 
-    > spark-submit scheduler.py sample-data/tweets.txt
+    > spark-submit scheduler.py watch_dir consumer_key consumer_secret
+      access_key access_secret
 
-It should say somewhere in the flurry of log messages that two tweets matched
-the filter. If everything is running fine, you can get rid of the error messages
-by appending `2> /dev/null` to the command above. There's also a settings file
-somewhere that we could modify. If you find that, please write it here.
+It should say somewhere in the flurry of log messages the number of tweets that
+matched the filter. If everything is running fine, you can get rid of the error
+messages by appending `2> /dev/null` to the command above. There's also a settings
+file somewhere that we could modify. If you find that, please write it here.
+
+For more details on the available command-line arguments, run:
+
+    > spark-submit scheduler.py -h
 
 
 ## Next steps
 
-* Figure out how to get tweets and write them into files. This might help: https://databricks.gitbooks.io/databricks-spark-reference-applications/content/twitter_classifier/collect.html
 * Make the scheduler into a standalone process that communicates with the query parser and the dirwatcher.
 * Define our query language
 * Define the API for query parser so our webserver will be able to register queries and get results.
