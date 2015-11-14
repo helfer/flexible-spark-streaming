@@ -114,7 +114,7 @@ if __name__ == "__main__":
     q2 = Query(['#spark'])
 
     n = 0
-    # just run for about 5 seconds so I don't have to manually kill the dirwatcher
+    # just run for a couple of seconds so I don't have to manually kill the dirwatcher
     while keep_going and n < 10:
         # let's assume this gets called often enough to empty the queue...
 
@@ -133,7 +133,7 @@ if __name__ == "__main__":
             print("%s tweets match the filter: %s." % (count2, ['#spark']))
 
         n += 1
-        time.sleep(0.5)
+        time.sleep(2)
 
     dw.stop()
     ts.stop()
