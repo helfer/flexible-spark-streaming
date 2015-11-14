@@ -1,3 +1,10 @@
+# Super-secret configuration files with Twitter key and stuff
+tapi.txt
+run.sh
+
+# Don't commit twitter stream data
+watch-dir/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
