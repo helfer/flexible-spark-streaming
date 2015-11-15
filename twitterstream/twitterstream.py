@@ -17,16 +17,18 @@ class TweetListener(StreamListener):
 
     def on_data(self, data):
         vals = json.loads(data)
+        '''
         if 'text' in vals:
             self.writer.write(vals['text'])
         elif self.writer.verbose:
             print 'No text key in data'
-
+        '''
+        self.writer.write(vals)
         return True 
 
 
     def on_error(self, status):
-        print status
+        print('error: ' + status)
 
 
 class TwitterStream(StreamListener):
@@ -56,8 +58,8 @@ class TwitterStream(StreamListener):
 
     # Write the tweet text to the current file. May throw an error if the file
     # is currently being switched out (i.e. writing at the end of a window).
-    def write(self, text):
-        self.buf.appendleft(text)
+    def write(self, vals):
+        self.buf.appendleft(json.dumps(vals))
 
 
     def run(self):

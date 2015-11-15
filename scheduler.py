@@ -6,6 +6,7 @@ import signal
 import sys
 import time
 import argparse
+import json
 
 from collections import deque
 from operator import add
@@ -104,9 +105,14 @@ if __name__ == "__main__":
     dw = DirWatcher(args.watch_dir, register_new_tweet_files)
     dw.start()
 
-    # dummy parse tweet method:
+    # dummy parse tweet method. for now, only get tweet text.
     def parse_tweet(line):
-        return {'text': line.strip()}
+        text = ''
+        if len(line) > 0:
+            data = json.loads(line)
+            if 'text' in data:
+                text = data['text']
+        return {'text': text}
 
     # dummy query for testing:
     tag_list = ['#test']
@@ -121,8 +127,7 @@ if __name__ == "__main__":
         if new_tweet_files:
             filename = os.path.abspath(os.path.join(sys.argv[1], new_tweet_files.popleft()))
             print("new file: %s" % (filename))
-            lines = sc.textFile(filename, 3) # 5 is the number of blocks
-
+            lines = sc.textFile(filename) # no minimum line param in case of empty file
 
             # Loads all URLs from input file and initialize their neighbors.
             tweets = lines.map(parse_tweet)
