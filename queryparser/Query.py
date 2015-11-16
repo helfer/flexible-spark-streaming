@@ -7,7 +7,7 @@ class Query():
     # right now matches tweet if ANY of the tags is in the tweet, not all
     def filter(self, tweet):
       for t in self.tags:
-        if t in tweet['text']:
+        if 'text' in tweet and t in tweet['text']:
           return True
       return False
 

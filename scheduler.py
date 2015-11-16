@@ -107,17 +107,13 @@ if __name__ == "__main__":
 
     # dummy parse tweet method. for now, only get tweet text.
     def parse_tweet(line):
-        text = ''
-        if len(line) > 0:
-            data = json.loads(line)
-            if 'text' in data:
-                text = data['text']
-        return {'text': text}
+        return json.loads(line) if len(line) > 0 else {}
 
     # dummy query for testing:
-    tag_list = ['#test']
+    tag_list = ['and']
     q = Query(tag_list)
-    q2 = Query(['#spark'])
+    tag_list2 = ['but']
+    q2 = Query(tag_list2)
 
     n = 0
     # just run for a couple of seconds so I don't have to manually kill the dirwatcher
@@ -128,14 +124,15 @@ if __name__ == "__main__":
             filename = os.path.abspath(os.path.join(sys.argv[1], new_tweet_files.popleft()))
             print("new file: %s" % (filename))
             lines = sc.textFile(filename) # no minimum line param in case of empty file
+            total = lines.count()
 
             # Loads all URLs from input file and initialize their neighbors.
             tweets = lines.map(parse_tweet)
             count = tweets.filter(q.filter).count()
             count2 = tweets.filter(q2.filter).count()
 
-            print("%s tweets match the filter: %s." % (count, tag_list))
-            print("%s tweets match the filter: %s." % (count2, ['#spark']))
+            print("%s of %s tweets match the filter: %s." % (count, total, tag_list))
+            print("%s of %s tweets match the filter: %s." % (count2, total, tag_list2))
 
         n += 1
         time.sleep(2)
