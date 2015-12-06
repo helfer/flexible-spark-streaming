@@ -1,6 +1,0 @@
-This is one tweet with no tags
-This tweet contains the tag #spark
-This tweet contains another tag #test
-This tweet is also a test #test
-Some people write other stuff
-Another #spark #test

@@ -1,37 +1,40 @@
-import os, time, json
+import collections
+import json
+import thread
+import threading
+import time
 
-from collections import deque
-
-from threading import Thread
 from tweepy import Stream, OAuthHandler
 from tweepy.streaming import StreamListener
+
+import safethread
+
+class TweetException(Exception):
+    pass
 
 class TweetListener(StreamListener):
 
     def __init__(self, writer):
+        super(TweetListener, self).__init__()
         self.writer = writer
-
-        # Python 2.x.x style
-        super(StreamListener, self).__init__()
-
 
     def on_data(self, data):
         vals = json.loads(data)
-        '''
-        if 'text' in vals:
-            self.writer.write(vals['text'])
-        elif self.writer.verbose:
-            print 'No text key in data'
-        '''
         self.writer.write(vals)
-        return True 
-
+        return True
 
     def on_error(self, status):
-        print('error: ' + status)
+        if status == 420:
+            print("WARNING: Tweepy received status code 420")
+            return True  # continue processing
 
+        print("")
+        print("Tweepy received status code %i, exiting..." % status)
+        print("")
+        thread.interrupt_main()
+        return False
 
-class TwitterStream(StreamListener):
+class TweetDownloader(safethread.SafeThread, StreamListener):
 
     def __init__(self,
                  destpath,
@@ -39,49 +42,38 @@ class TwitterStream(StreamListener):
                  consumer_secret,
                  access_token,
                  access_secret,
-                 prefix = 'tweets',
-                 suffix = 'txt',
                  window = 10000,
                  verbose = False):
+        super(TweetDownloader, self).__init__(name="TweetDownloader")
         self.destpath = destpath
         self.consumer_key = consumer_key
         self.consumer_secret = consumer_secret
         self.access_token = access_token
         self.access_secret = access_secret
-        self.prefix = prefix
-        self.suffix = suffix
+        self.prefix = 'tweets'
+        self.suffix = 'txt'
         self.window = window
-        self.verbose = verbose
-        self.buf = deque()
+        self.buf = collections.deque()
         self.stopped = True
-
 
     # Write the tweet text to the current file. May throw an error if the file
     # is currently being switched out (i.e. writing at the end of a window).
     def write(self, vals):
         self.buf.appendleft(json.dumps(vals))
 
+    def action(self):
+        if len(self.buf) > 0:
+            self.f.write(self.buf.pop() + '\n')
 
-    def run(self):
-        while not self.stopped:
-            if len(self.buf) > 0:
-                try:
-                    self.f.write(self.buf.pop() + '\n')
-                except UnicodeEncodeError:
-                    if self.verbose:
-                        print 'Cannot encode non-unicode characters'
-
-            if ((time.time() * 1000) - self.begin > self.window):
-                self.f.close()
-                self.begin = int(time.time() * 1000)
-                self.f = open(
-                             self.destpath +
-                             self.prefix + '-' + str(self.begin) +
-                             '.' + self.suffix, 'w')
+        if ((time.time() * 1000) - self.begin > self.window):
+            self.f.close()
+            self.begin = int(time.time() * 1000)
+            self.f = open(
+                self.destpath +
+                self.prefix + '-' + str(self.begin) +
+                '.' + self.suffix, 'w')
 
     def start(self):
-        self.stopped = False
-
         # Setup the stream
         auth = OAuthHandler(self.consumer_key, self.consumer_secret)
         auth.set_access_token(self.access_token, self.access_secret)
@@ -96,11 +88,8 @@ class TwitterStream(StreamListener):
 
         # Start the threads
         self.stream.sample(async=True)
-        thread = Thread(target=self.run, args=())
-        thread.start()
-
+        super(TweetDownloader, self).start()
 
     def stop(self):
         self.stream.disconnect()
-        self.stopped = True
-
+        super(TweetDownloader, self).stop()

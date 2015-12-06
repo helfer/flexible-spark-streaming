@@ -11,13 +11,9 @@ class Query():
           return True
       return False
 
-
-
 # Here's what a query could look like:
 #
 # SELECT count(id), user.name
 # FROM tweets[<starttime>:<endtime>]
 # WHERE "#test" IN hashtags AND location LIKE "%USA%"
 # GROUP BY user.name
-
-
