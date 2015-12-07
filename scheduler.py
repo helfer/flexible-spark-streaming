@@ -7,6 +7,7 @@ import pyspark
 
 import dirwatcher
 import queryparser
+import wrapper
 
 class FlexibleStreamingScheduler():
 
@@ -16,6 +17,7 @@ class FlexibleStreamingScheduler():
 
         self.dw = dirwatcher.DirWatcher(
             self.watch_dir, self.register_new_input_files)
+        self.sc = pyspark.SparkContext(appName="FlexibleStreaming")
 
     def register_new_input_files(self, changes):
         if changes['added']:
@@ -26,7 +28,6 @@ class FlexibleStreamingScheduler():
         self.dw.start()
 
         # INITIALIZE
-        sc = pyspark.SparkContext(appName="FlexibleStreaming")
         q1 = queryparser.Query(['and'])
         q2 = queryparser.Query(['but'])
 
@@ -40,7 +41,7 @@ class FlexibleStreamingScheduler():
                     os.path.join(self.watch_dir, self.inputs.popleft()))
                 print("Detected new file: %s" % filename)
 
-                lines = sc.textFile(filename)
+                lines = wrapper.Wrapper(self.sc.textFile(filename))
                 #     no minimum line param in case of empty file
                 total = lines.count()
 
@@ -49,6 +50,10 @@ class FlexibleStreamingScheduler():
                 count1 = tweets.filter(q1.filter).count()
                 count2 = tweets.filter(q2.filter).count()
 
+                total = total.__eval__()
+                count1 = count1.__eval__()
+                count2 = count2.__eval__()
+
                 print("%s of %s tweets match the filter: %s." % (count1, total, ['and']))
                 print("%s of %s tweets match the filter: %s." % (count2, total, ['but']))
 
@@ -56,3 +61,4 @@ class FlexibleStreamingScheduler():
 
     def stop(self):
         self.dw.stop()
+        self.sc.stop()
