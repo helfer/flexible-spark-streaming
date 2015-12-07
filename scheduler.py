@@ -56,8 +56,7 @@ class FlexibleStreamingScheduler():
 
                 print("%s of %s tweets match the filter: %s." % (count1, total, ['and']))
                 print("%s of %s tweets match the filter: %s." % (count2, total, ['but']))
-
-            time.sleep(2)
+            time.sleep(0.1)
 
     def stop(self):
         self.dw.stop()
