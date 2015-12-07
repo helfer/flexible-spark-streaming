@@ -1,6 +1,5 @@
 class Wrapper(object):
 
-    # http://stackoverflow.com/a/2704528
     def __init__(self, wrapped, deferred=None):
         """
         Wraps an object for the purpose of lazy evaluation and optimization. To
@@ -55,6 +54,11 @@ class Wrapper(object):
             ...
 
         """
+        # http://stackoverflow.com/a/2704528
+        if name == "__getnewargs__":
+            # http://stackoverflow.com/a/6416080
+            raise ValueError("You're trying to pickle a Wrapper. Don't do that!")
+
         # This logic is probably buggy
         attr = getattr(self._wrapped, name)
         if hasattr(attr, "__call__"):
@@ -153,3 +157,70 @@ class CommonSubqueryWrapper(CachingWrapper):
                 self._call_cache[hashkey] = self.__class__(self, deferred)
             return self._call_cache[hashkey]
         return fn
+
+class ScanSharingWrapper(CommonSubqueryWrapper):
+
+    def __init__(self, *args, **kwargs):
+        """
+        Wraps an object and performs scan sharing on a limited set of queries,
+        e.g. map. The wrapper records all deferred map actions called on it. At
+        evaluation time, the first child performs a mega-map consisting of the
+        union of all these map actions. Then each child runs their individual
+        map on this result, which should be an efficiency gain.
+        """
+        super(ScanSharingWrapper, self).__init__(*args, **kwargs)
+
+        # For each optimized action, a list of arguments to be computed, e.g.
+        # self._tasks["map"] is a list of map actions to run.
+        self._tasks = {
+            "map": [],
+            "filter": []
+        }
+
+        # For each optimized action, the "megaresult" produced by running the
+        # megaquery with the actions in the list above.
+        self._results = {}
+
+    def __getcall__(self, name):
+        fn = super(ScanSharingWrapper, self).__getcall__(name)
+        def ffn(*args, **kwargs):
+            if name in self._tasks:
+                if len(args) != 1:
+                    raise ValueError("%s only takes one argument" % name)
+                if len(kwargs) != 0:
+                    raise ValueError("%s does not take keyword arguments" % name)
+                self._tasks[name].append(args[0])
+            return fn(*args, **kwargs)
+        return ffn
+
+    def __eval__(self):
+        if not self._deferred:
+            return self._wrapped
+        else:
+            name, args, kwargs = self._deferred
+            parent = self._wrapped.__eval__()
+
+            # Bind to a local variable to prevent Spark from trying to pickle
+            # self.
+            tasks = self._wrapped._tasks[name] if name in self._wrapped._tasks else None
+
+            if name == "filter":
+                partial = self.__getpartial__(name, parent,
+                                              lambda item: any(task(item) for task in tasks))
+                return partial.filter(*args, **kwargs)
+            elif name == "map":
+                partial = self.__getpartial__(name, parent,
+                                              lambda item: [task(item) for task in tasks])
+                index = self._wrapped._tasks[name].index(args[0])
+                return partial.map(lambda item: item[index])
+            else:
+                return getattr(parent, name)(*args, **kwargs)
+
+    def __getpartial__(self, name, parent, megaquery):
+        """
+        Gets the cached megaresult from the parent. If it hasn't been computed
+        yet, compute, cache and return it.
+        """
+        if name not in self._wrapped._results:
+            self._wrapped._results[name] = getattr(parent, name)(megaquery)
+        return self._wrapped._results[name]
