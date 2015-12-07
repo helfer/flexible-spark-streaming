@@ -1,5 +1,6 @@
 import collections
 import json
+import os
 import thread
 import threading
 import time
@@ -67,11 +68,12 @@ class TweetDownloader(safethread.SafeThread, StreamListener):
 
         if ((time.time() * 1000) - self.begin > self.window):
             self.f.close()
+            fname = self.destpath + self.prefix + '-' + str(self.begin) + \
+                    '.' + self.suffix
+            os.rename(self.destpath + 'tmp', fname)
+
             self.begin = int(time.time() * 1000)
-            self.f = open(
-                self.destpath +
-                self.prefix + '-' + str(self.begin) +
-                '.' + self.suffix, 'w')
+            self.f = open(self.destpath + 'tmp', 'w')
 
     def start(self):
         # Setup the stream
@@ -81,10 +83,7 @@ class TweetDownloader(safethread.SafeThread, StreamListener):
 
         # Create the first file
         self.begin = int(time.time() * 1000)
-        self.f = open(
-                     self.destpath +
-                     self.prefix + '-' + str(self.begin) +
-                     '.' + self.suffix, 'w')
+        self.f = open(self.destpath + 'tmp', 'w')
 
         # Start the threads
         self.stream.sample(async=True)
