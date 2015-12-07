@@ -21,7 +21,7 @@ class Wrapper(object):
         if hasattr(attr, "__call__"):
             def fn(*args, **kwargs):
                 deferred = (name, args, kwargs)
-                return Wrapper(self, deferred)
+                return self.__class__(self, deferred)
             return fn
         else:
             print("WARNING: raw attribute access")
@@ -40,3 +40,16 @@ class Wrapper(object):
             # then apply the deferred action
             name, args, kwargs = self.__deferred
             return getattr(parent, name)(*args, **kwargs)
+
+class CachingWrapper(Wrapper):
+
+    def __init__(self, *args, **kwargs):
+        super(CachingWrapper, self).__init__(*args, **kwargs)
+        self.__cached = None
+        self.__cache_present = False
+
+    def __eval__(self):
+        if not self.__cache_present:
+            self.__cached = super(CachingWrapper, self).__eval__()
+            self.__cache_present = True
+        return self.__cached
