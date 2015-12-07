@@ -53,3 +53,23 @@ class CachingWrapper(Wrapper):
             self._cached = super(CachingWrapper, self).__eval__()
             self._cache_present = True
         return self._cached
+
+class CommonSubqueryWrapper(CachingWrapper):
+
+    def __init__(self, *args, **kwargs):
+        super(CommonSubqueryWrapper, self).__init__(*args, **kwargs)
+        self._call_cache = {}
+
+    def __getattr__(self, name):
+        attr = getattr(self._wrapped, name)
+        if hasattr(attr, "__call__"):
+            def fn(*args, **kwargs):
+                hashkey = (name, args, frozenset(kwargs.items()))
+                if hashkey not in self._call_cache:
+                    deferred = (name, args, kwargs)
+                    self._call_cache[hashkey] = self.__class__(self, deferred)
+                return self._call_cache[hashkey]
+            return fn
+        else:
+            print("WARNING: raw attribute access")
+            return attr

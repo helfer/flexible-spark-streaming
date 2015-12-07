@@ -41,7 +41,7 @@ class FlexibleStreamingScheduler():
                     os.path.join(self.watch_dir, self.inputs.popleft()))
                 print("Detected new file: %s" % filename)
 
-                lines = wrapper.CachingWrapper(self.sc.textFile(filename))
+                lines = wrapper.CommonSubqueryWrapper(self.sc.textFile(filename))
                 #     no minimum line param in case of empty file
                 total = lines.count()
 
