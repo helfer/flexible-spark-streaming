@@ -13,11 +13,11 @@ class Wrapper(object):
             object at eval-time: (name, args, kwargs). May only be set
             when the wrapped object is another Wrapper.
         """
-        self.__wrapped = wrapped
-        self.__deferred = deferred
+        self._wrapped = wrapped
+        self._deferred = deferred
 
     def __getattr__(self, name):
-        attr = getattr(self.__wrapped, name)
+        attr = getattr(self._wrapped, name)
         if hasattr(attr, "__call__"):
             def fn(*args, **kwargs):
                 deferred = (name, args, kwargs)
@@ -31,25 +31,25 @@ class Wrapper(object):
         """
         Evaluate the wrapped object, converting it to a real object.
         """
-        if not self.__deferred:
+        if not self._deferred:
             # no deferred action, just pass through the object
-            return self.__wrapped
+            return self._wrapped
         else:
             # evaluate all ancestors of this object
-            parent = self.__wrapped.__eval__()
+            parent = self._wrapped.__eval__()
             # then apply the deferred action
-            name, args, kwargs = self.__deferred
+            name, args, kwargs = self._deferred
             return getattr(parent, name)(*args, **kwargs)
 
 class CachingWrapper(Wrapper):
 
     def __init__(self, *args, **kwargs):
         super(CachingWrapper, self).__init__(*args, **kwargs)
-        self.__cached = None
-        self.__cache_present = False
+        self._cached = None
+        self._cache_present = False
 
     def __eval__(self):
-        if not self.__cache_present:
-            self.__cached = super(CachingWrapper, self).__eval__()
-            self.__cache_present = True
-        return self.__cached
+        if not self._cache_present:
+            self._cached = super(CachingWrapper, self).__eval__()
+            self._cache_present = True
+        return self._cached
