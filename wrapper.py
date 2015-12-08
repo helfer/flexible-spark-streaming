@@ -200,23 +200,22 @@ class ScanSharingWrapper(CommonSubqueryWrapper):
             name, args, kwargs = self._deferred
             parent = self._wrapped.__eval__()
 
-            # Bind to a local variable to prevent Spark from trying to pickle
-            # self.
-            tasks = self._wrapped._tasks[name] if name in self._wrapped._tasks else None
+            # Bind to a local variable to prevent Spark from trying to pickle self.
+            tasks = self._wrapped._tasks.get(name)
 
             if name == "filter":
-                partial = self.__getpartial__(name, parent,
-                                              lambda item: any(task(item) for task in tasks))
-                return partial.filter(*args, **kwargs)
+                megaresult = self.__getmegaresult__(
+                    name, parent, lambda item: any(task(item) for task in tasks))
+                return megaresult.filter(*args, **kwargs)
             elif name == "map":
-                partial = self.__getpartial__(name, parent,
-                                              lambda item: [task(item) for task in tasks])
+                megaresult  = self.__getmegaresult__(
+                    name, parent, lambda item: [task(item) for task in tasks])
                 index = self._wrapped._tasks[name].index(args[0])
-                return partial.map(lambda item: item[index])
+                return megaresult.map(lambda item: item[index])
             else:
                 return getattr(parent, name)(*args, **kwargs)
 
-    def __getpartial__(self, name, parent, megaquery):
+    def __getmegaresult__(self, name, parent, megaquery):
         """
         Gets the cached megaresult from the parent. If it hasn't been computed
         yet, compute, cache and return it.
