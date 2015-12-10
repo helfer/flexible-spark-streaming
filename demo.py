@@ -25,6 +25,9 @@ def main():
         type=int,
         help="the window size (in ms) for reading input data, default=10000",
         default=10000)
+    parser.add_argument('--no-firehose', dest='firehose', action='store_false')
+    parser.set_defaults(firehose=True)
+
     args = parser.parse_args()
 
     # Normalize watch_dir and ensure it exists
@@ -40,16 +43,19 @@ def main():
     # STARTUP
     print("Initializing demo...")
 
-    print("* Starting tweet downloader")
-    td = tweetdownloader.TweetDownloader(
-        args.watch_dir,
-        creds['consumer_key'],
-        creds['consumer_secret'],
-        creds['access_key'],
-        creds['access_secret'],
-        args.window)
-    stop_list.append(td)
-    td.start()
+    if args.firehose:
+        print("* Starting tweet downloader")
+        td = tweetdownloader.TweetDownloader(
+            args.watch_dir,
+            creds['consumer_key'],
+            creds['consumer_secret'],
+            creds['access_key'],
+            creds['access_secret'],
+            args.window)
+        stop_list.append(td)
+        td.start()
+    else:
+        print("* Running in static mode, not downloading tweets")
 
     print("* Starting scheduler")
     fss = scheduler.FlexibleStreamingScheduler(args.watch_dir)
