@@ -40,12 +40,17 @@ if (Meteor.isClient) {
 
     // counter starts at 0
     //Session.setDefault('counter', 0);
-    Session.setDefault('currently_running', Queries.find().fetch());
 
     Template.interact.helpers({
         currently_running: function() {
-            return Session.get('currently_running');
+            return Queries.find();
         }
+    });
+
+    Template.interact.events({
+      'click .cancel_query': function(event,template){
+        Queries.remove({_id: event.target.id});
+      }
     });
 
     // Add an event listener for Run-button
@@ -64,14 +69,12 @@ if (Meteor.isClient) {
           console.log('inserted ' + query_id);
           Meteor.subscribe('results', query_id );
 
-          Session.set('currently_running', Session.get('currently_running') + '\n' + query_id);
           // all active queries should be listed somewhere
           // (later it should be possible to remove queries ...)
         },
 
         'click .reset': function(){
           Meteor.call('reset');
-          Session.set('currently_running', '');
         }
     });
 
