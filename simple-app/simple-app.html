@@ -29,7 +29,9 @@
 			<input type="button" value="Run" class="runbutton"/>
 		</form>
 		<form id="queryform">
-			<input type="text" name="query" value="SELECT count(*) FROM tweets WHERE text CONTAINS 'One Direction'" />
+			SELECT <input type="text" name="query" value="count" /> (<input type="text" name="query_field" value="*" />)<br>
+			FROM <input type="text" name="query_from" value="tweets" /> <br>
+			WHERE <input type="text" name="query_where" value="tweets" /> <br>
 			<input type="submit" value="Submit" class="querybtn"/>
 		</form>
     <form>
