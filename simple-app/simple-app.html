@@ -26,8 +26,15 @@
 	<div class="form-style-5">
 		<form>
 			<input type="text" id="command" value="{{last_cmd}}" />
-			<input type="button" value="Run" />
+			<input type="button" value="Run" class="runbutton"/>
 		</form>
+		<form id="queryform">
+			<input type="text" name="query" value="SELECT count(*) FROM tweets WHERE text CONTAINS 'One Direction'" />
+			<input type="submit" value="Submit" class="querybtn"/>
+		</form>
+    <form>
+			<input type="button" value="Reset" class="reset"/>
+    </form>
 	</div>
 
 	<p>You've pressed the button {{counter}} times.</p>

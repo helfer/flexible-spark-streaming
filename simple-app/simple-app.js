@@ -1,5 +1,32 @@
 var Replies = new Meteor.Collection('replies');
 
+
+Queries = new Meteor.Collection('queries');
+/* Format for queries collection:
+ *
+ * {
+ *  _id: query id, automatically assigned by mongodb
+ *  select: { agg: 'max', field: 'retweets' }, // select is just one field for now. can be array later maybe.
+ *  from: { start: 0, end: 0}, // we don't do range queries yet, so this field is ignored
+ *  where: { _and: [ { text: { _contains: 'abc' } }, { lang: { _eq: 'en' } } ] } // _and and _or can be nested
+ *  // we only support _contains and _eq (equals) for now
+ *  group_by: 0 //let's not do this for now, we can implement it later.
+ *
+ */
+Results = new Meteor.Collection('results');
+/* Format for Results collection
+ *
+ * {
+ *  _id: xyz, //we don't care about this
+ *  query_id: x, //this references the query
+ *  time: Date(), // a date object or other timestamp so we can sort on it
+ *  values: [ 5 ], // an array with just one value for now. maybe more later.
+ *  // when we support group_by, values will have to become an object.
+ *
+ */
+
+
+
 if (Meteor.isClient) {
 
     var time = (new Date()).getTime();
@@ -36,7 +63,7 @@ if (Meteor.isClient) {
 
     // Add an event listener for Run-button
     Template.interact.events({
-        'click [type="button"]': function() {
+        'click .runbutton': function() {
             Session.set('counter', Session.get('counter') + 1);
 
             var cmd = $('#command').val();
@@ -44,12 +71,33 @@ if (Meteor.isClient) {
 
             // Call the command method in server side
             Meteor.call('command', cmd);
+        },
+        'submit #queryform': function( event, template ){
+          event.preventDefault();
+          console.log(event.target.query.value);
+          // the query form should be expanded to contain separate input fields or selects for each argument.
+
+          // dummy query:
+          var query_id = Queries.insert({
+              select: { agg: 'count', field: '*' },
+              from: 0, //ignored
+              where: { text: { _contains: 'One Direction' } }
+          });
+          console.log('inserted ' + query_id);
+          Meteor.subscribe('results', query_id );
+
+          // all active queries should be listed somewhere
+          // (later it should be possible to remove queries ...)
+        },
+        'click .reset': function(){
+          Meteor.call('reset');
         }
     });
 
     // Start listening changes in Replies
     Meteor.autosubscribe(function() {
         Meteor.subscribe('replies');
+        Meteor.subscribe('queries');
     });
 
     // Set an observer to be triggered when Replies.insert() is invoked
@@ -154,8 +202,16 @@ if (Meteor.isServer) {
         return Replies.find();
     });
 
+    Meteor.publish('queries', function() {
+        return Queries.find();
+    });
+
+    Meteor.publish('results', function(query_id) {
+        return Results.find( {query_id: query_id} );
+    });
+
     Meteor.methods({
-        'command': function(line) {            
+        'command': function(line) {
             // Run the requested command in shell
             exec(line, function(error, stdout, stderr) {
                 // Collection commands must be executed within a Fiber
@@ -165,6 +221,9 @@ if (Meteor.isServer) {
                                     cmd: line});
                 }).run();
             });
+        },
+        'reset': function(){
+          Queries.remove({});
         }
     });
 }
