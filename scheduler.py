@@ -27,9 +27,9 @@ class FlexibleStreamingScheduler():
         # START DIRECTORY WATCHER
         self.dw.start()
 
+        #queryparser.init()
+
         # INITIALIZE
-        q1 = queryparser.Query(['and'])
-        q2 = queryparser.Query(['but'])
 
         def parse_input(i):
             return json.loads(i) if len(i) > 0 else {}
@@ -40,6 +40,8 @@ class FlexibleStreamingScheduler():
                 filename = os.path.abspath(
                     os.path.join(self.watch_dir, self.inputs.popleft()))
                 print("Detected new file: %s" % filename)
+                queries = queryparser.get_active_queries()
+                print 'queries:', queries
 
                 lines = wrapper.ScanSharingWrapper(self.sc.textFile(filename))
                 #     no minimum line param in case of empty file
@@ -47,15 +49,18 @@ class FlexibleStreamingScheduler():
 
                 # Loads all URLs from input file and initialize their neighbors.
                 tweets = lines.map(parse_input)
-                count1 = tweets.filter(q1.filter).count()
-                count2 = tweets.filter(q2.filter).count()
+
+                tmp = [] #ugly, but I'm sleepy
+                for q in queries:
+                    tmp.append( tweets.filter(q.filter) )
 
                 total = total.__eval__()
-                count1 = count1.__eval__()
-                count2 = count2.__eval__()
+                counts = [ rdd.count().__eval__() for rdd in tmp ]
 
-                print("%s of %s tweets match the filter: %s." % (count1, total, ['and']))
-                print("%s of %s tweets match the filter: %s." % (count2, total, ['but']))
+                for i,c in enumerate(counts):
+                    print(">>> %s of %s tweets match the filter: %s." % (c, total, queries[i].where))
+
+                queryparser.write_results_to_mongodb( queries, counts )
             time.sleep(0.1)
 
     def stop(self):
