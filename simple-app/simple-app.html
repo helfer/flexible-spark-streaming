@@ -24,23 +24,50 @@
 <template name="interact">
 
 	<div class="form-style-5">
+		<!--
 		<form>
 			<input type="text" id="command" value="{{last_cmd}}" />
 			<input type="button" value="Run" class="runbutton"/>
 		</form>
+		-->
 		<form id="queryform">
-			SELECT <input type="text" name="query" value="count" /> (<input type="text" name="query_field" value="*" />)<br>
-			FROM <input type="text" name="query_from" value="tweets" /> <br>
-			WHERE <input type="text" name="query_where" value="tweets" /> <br>
-			<input type="submit" value="Submit" class="querybtn"/>
+			<div class="row">
+				<div class="form-left"> SELECT </div> 
+				<div class="form-right"> 
+					<input type="text" name="query_select_aggregator" value="count" /> (<input type="text" name="query_select_field" value="*" />) 
+				</div>
+			</div>
+			
+			<div class="row">
+				<div class="form-left"> FROM </div>
+				<div class="form-right"> 
+					<input type="text" name="query_from" value="tweets" disabled /> 
+				</div>
+			</div>
+
+			<div class="row">
+				<div class="form-left"> WHERE </div>
+				<input type="text" name="query_where_field" value="text" disabled /> 
+				<select name="query_where_assert" disabled> 
+					<option value="CONTAINS" selected>contains</option>
+					<option value="EQUALS">equals</option>
+				</select>
+				<input type="text" name="query_where_value" value="value" /> 
+			</div>
+
+			<input type="submit" value="Submit" class="querybtn"/> <input type="button" value="Reset" class="reset"/>
 		</form>
-    <form>
-			<input type="button" value="Reset" class="reset"/>
-    </form>
 	</div>
 
-	<p>You've pressed the button {{counter}} times.</p>
+	<div class="currently-running">
+		<p>Currently running queries: </p>
 
+		<pre>{{ currently_running }}</pre>
+	</div>
+	<!--
+	<p>You've pressed the button {{counter}} times.</p>
 	<pre>{{ window }}</pre>
+	-->
+
 </template>
 

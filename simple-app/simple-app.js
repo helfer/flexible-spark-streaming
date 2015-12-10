@@ -1,7 +1,4 @@
-var Replies = new Meteor.Collection('replies');
-
-
-Queries = new Meteor.Collection('queries');
+var Queries = new Meteor.Collection('queries');
 /* Format for queries collection:
  *
  * {
@@ -13,7 +10,7 @@ Queries = new Meteor.Collection('queries');
  *  group_by: 0 //let's not do this for now, we can implement it later.
  *
  */
-Results = new Meteor.Collection('results');
+var Results = new Meteor.Collection('results');
 /* Format for Results collection
  *
  * {
@@ -24,7 +21,6 @@ Results = new Meteor.Collection('results');
  *  // when we support group_by, values will have to become an object.
  *
  */
-
 
 
 if (Meteor.isClient) {
@@ -43,75 +39,59 @@ if (Meteor.isClient) {
     var series;
 
     // counter starts at 0
-    Session.setDefault('counter', 0);
+    //Session.setDefault('counter', 0);
+    Session.setDefault('currently_running', Queries.find().fetch());
 
     Template.interact.helpers({
-        counter: function () {
-            return Session.get('counter');
-        },
-
-        // Show the last command in input field
-        last_cmd: function() {
-            return Session.get('last_cmd');
-        },
-
-        // Show the last shell reply in browser
-        window: function() {
-            return Session.get('stdout');
+        currently_running: function() {
+            return Session.get('currently_running');
         }
     });
 
     // Add an event listener for Run-button
     Template.interact.events({
-        'click .runbutton': function() {
-            Session.set('counter', Session.get('counter') + 1);
-
-            var cmd = $('#command').val();
-            Session.set('last_cmd', cmd);
-
-            // Call the command method in server side
-            Meteor.call('command', cmd);
-        },
         'submit #queryform': function( event, template ){
           event.preventDefault();
-          console.log(event.target.query.value);
+          console.log(event.target.query_from.value);
           // the query form should be expanded to contain separate input fields or selects for each argument.
 
           // dummy query:
           var query_id = Queries.insert({
-              select: { agg: 'count', field: '*' },
+              select: { agg: event.target.query_select_aggregator.value , field: event.target.query_select_field.value },
               from: 0, //ignored
-              where: { text: { _contains: 'One Direction' } }
+              where: {text:{ _contains:event.target.query_where_value.value} }
           });
           console.log('inserted ' + query_id);
           Meteor.subscribe('results', query_id );
 
+          Session.set('currently_running', Session.get('currently_running') + '\n' + query_id);
           // all active queries should be listed somewhere
           // (later it should be possible to remove queries ...)
         },
+
         'click .reset': function(){
           Meteor.call('reset');
+          Session.set('currently_running', '');
         }
     });
 
     // Start listening changes in Replies
     Meteor.autosubscribe(function() {
-        Meteor.subscribe('replies');
         Meteor.subscribe('queries');
+        Meteor.subscribe('results');
     });
 
-    // Set an observer to be triggered when Replies.insert() is invoked
-    Replies.find().observe({
+    // Set an observer to be triggered when Results.insert() is invoked
+    Results.find().observe({
         'added': function(item) {
-            // Set the terminal reply to Session
-            Session.set('stdout', item.message);
-
+            //Session.set('', item.message);
             var x = (new Date()).getTime(), // current time
-            y = Math.random();
+            y = item.values[0];
+
             series.addPoint({
                 x: x,
                 y: y,
-                cmd: item.cmd
+                cmd: item.query_id
             }, true, true);
         }
     });
@@ -197,11 +177,6 @@ if (Meteor.isServer) {
         Fiber = Npm.require('fibers');
     });
 
-    // Trigger the observer in Replies collection
-    Meteor.publish('replies', function() {
-        return Replies.find();
-    });
-
     Meteor.publish('queries', function() {
         return Queries.find();
     });
@@ -211,6 +186,7 @@ if (Meteor.isServer) {
     });
 
     Meteor.methods({
+        /*
         'command': function(line) {
             // Run the requested command in shell
             exec(line, function(error, stdout, stderr) {
@@ -222,6 +198,7 @@ if (Meteor.isServer) {
                 }).run();
             });
         },
+        */
         'reset': function(){
           Queries.remove({});
         }
