@@ -218,8 +218,10 @@ class ScanSharingWrapper(CommonSubqueryWrapper):
         return ffn
 
     def __eval__(self):
-        if not self._deferred:
-            return self._wrapped
+        if self._cache_present:
+            pass
+        elif not self._deferred:
+            self._cached = self._wrapped
         else:
             name, args, kwargs = self._deferred
             parent = self._wrapped.__eval__()
@@ -230,12 +232,12 @@ class ScanSharingWrapper(CommonSubqueryWrapper):
             if name == "filter":
                 megaresult = self.__getmegaresult__(
                     name, parent, lambda item: any(task(item) for task in tasks))
-                return megaresult.filter(*args, **kwargs)
+                self._cached = megaresult.filter(*args, **kwargs)
             elif name == "map":
                 megaresult = self.__getmegaresult__(
                     name, parent, lambda item: [task(item) for task in tasks])
                 index = self._wrapped._tasks[name].index(args[0])
-                return megaresult.map(lambda item: item[index])
+                self._cached = megaresult.map(lambda item: item[index])
             elif name == "aggregate":
                 if name not in self._wrapped._results:
                     zeroValues = [v[0] for v in tasks]
@@ -253,9 +255,11 @@ class ScanSharingWrapper(CommonSubqueryWrapper):
                         zeroValues, seqOp, combOp)
                     megaresult = self._wrapped._results[name]
                     index = self._wrapped._tasks[name].index(v)
-                    return megaresult[index]
+                    self._cached = megaresult[index]
             else:
-                return getattr(parent, name)(*args, **kwargs)
+                self._cached = getattr(parent, name)(*args, **kwargs)
+        self._cache_present = True
+        return self._cached
 
     def __getmegaresult__(self, name, parent, megaquery):
         """
