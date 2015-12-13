@@ -66,3 +66,4 @@ target/
 # custom
 .twitter.json
 data/
+test/

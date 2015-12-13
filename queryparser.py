@@ -1,5 +1,7 @@
-from pymongo import MongoClient
+import json
 import time
+
+from pymongo import MongoClient
 
 class Query():
     # Super-simple query class, to be expanded

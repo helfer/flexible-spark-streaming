@@ -170,13 +170,8 @@ class CommonSubqueryWrapper(CachingWrapper):
             # parent object. Unlike deferred, hashkey is hashable.
             deferred = (name, args, kwargs)
             hashkey = make_hashkey(name, args, kwargs)
-            print "hashkey:", hashkey,
             if hashkey not in self._call_cache:
-                print "...new",
                 self._call_cache[hashkey] = self.__class__(self, deferred)
-            else:
-                print "...cached",
-            print self._call_cache[hashkey]
             return self._call_cache[hashkey]
         return fn
 
