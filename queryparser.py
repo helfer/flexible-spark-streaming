@@ -24,28 +24,29 @@ class SimpleQuery():
       self.where = where
 
     # this is very ugly, there's a much nicer way. fix it
-    def filter(self, tweet):
+    def filter(self, rdd):
         if "_and" in self.where:
             pass #for now. we'll make this work recursively later
         elif "_or" in self.where:
             pass #for now, we'll make this work recursively later
         else:
             field = self.where.keys()[0]
-
             field_filter = self.where[field]
             modifier = field_filter.keys()[0]
             value = field_filter[modifier]
 
-            if not field in tweet:
-                return False
-            if modifier == '_contains':
-                return value in tweet[field]
-            elif modifier == '_eq':
-                return value == tweet[field]
-            elif modifier == '_neq':
-                return value != tweet[field]
-            else:
-                raise Exception("Unsupported modifier in filter: {}".format( modifier ))
+            def f(tweet):
+                if not field in tweet:
+                    return False
+                if modifier == '_contains':
+                    return value in tweet[field]
+                elif modifier == '_eq':
+                    return value == tweet[field]
+                elif modifier == '_neq':
+                    return value != tweet[field]
+                else:
+                    raise Exception("Unsupported modifier in filter: {}".format( modifier ))
+            return rdd.filter(f)
 
     def aggregate(self, rdd):
         field = self.select['field']
@@ -66,7 +67,7 @@ class SimpleQuery():
             raise Exception("Unsupported aggregator in select: {}".format( agg ))
 
     def apply(self, source):
-        return self.aggregate(source.map(parse_input).filter(self.filter))
+        return self.aggregate(self.filter(source.map(parse_input)))
 
 # Here's what a query could look like:
 #
