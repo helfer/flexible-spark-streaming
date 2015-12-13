@@ -36,18 +36,16 @@ class FlexibleStreamingScheduler():
             return json.loads(i) if len(i) > 0 else {}
 
         # RUN LOOP
-        for i in range(0,3):
+        for i in range(0,5):
             queries = queryparser.get_active_queries()
             print 'queries:', queries
 
-            lines = wrapper.AggregateWrapper(self.sc.textFile(filename))
-            #     no minimum line param in case of empty file
-            total = lines.count()
             # START TIMER
             start = time.time()
 
             # reading the entire watch-dir
-            lines = wrapper.CommonSubqueryWrapper(self.sc.textFile(os.path.join(self.watch_dir, self.inputs[0] )))
+            #lines = wrapper.AggregateWrapper(self.sc.textFile(os.path.join(self.watch_dir, self.inputs[0] )))
+            lines = wrapper.CommonSubqueryWrapper(self.sc.textFile(os.path.join(self.watch_dir )))
             #     no minimum line param in case of empty file
             total = lines.count()
 
