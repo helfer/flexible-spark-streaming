@@ -45,24 +45,26 @@ class SimpleQuery():
             else:
                 raise Exception("Unsupported modifier in filter: {}".format( modifier ))
 
-    def aggregate(self):
+    def aggregate(self, rdd):
         field = self.select['field']
         agg = self.select['agg']
         if agg == 'count':
-            return
+            return rdd.aggregate(0, lambda acc, _: acc + 1, lambda a, b: a + b)
         elif agg == 'max':
-            pass # do a reduce a,b -> max(a,b)
+            return rdd.reduce(max)
         elif agg == 'min':
-            pass # do a reduce
+            return rdd.reduce(min)
         elif agg == 'sum':
-            pass # do a reduce. if we ever do group by, we'll have to do reduce by key
+            return rdd.reduce(sum)
         elif agg == 'avg':
-            pass # combineByKey, then calculate average from that.
+            n = rdd.reduce(sum)
+            d = rdd.aggregate(0, lambda acc, _: acc + 1, sum)
+            return n / float(d)
         else:
             raise Exception("Unsupported aggregator in select: {}".format( agg ))
 
     def apply(self, source):
-        return source.filter(self.filter).count()
+        return self.aggregate(source.filter(self.filter))
 
 # Here's what a query could look like:
 #
