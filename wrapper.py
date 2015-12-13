@@ -174,7 +174,7 @@ class ScanSharingWrapper(CommonSubqueryWrapper):
         # self._tasks["map"] is a list of map actions to run.
         self._tasks = {
             "map": [],
-            "filter": []
+            "filter": [],
         }
 
         # For each optimized action, the "megaresult" produced by running the
@@ -208,7 +208,7 @@ class ScanSharingWrapper(CommonSubqueryWrapper):
                     name, parent, lambda item: any(task(item) for task in tasks))
                 return megaresult.filter(*args, **kwargs)
             elif name == "map":
-                megaresult  = self.__getmegaresult__(
+                megaresult = self.__getmegaresult__(
                     name, parent, lambda item: [task(item) for task in tasks])
                 index = self._wrapped._tasks[name].index(args[0])
                 return megaresult.map(lambda item: item[index])
@@ -223,3 +223,41 @@ class ScanSharingWrapper(CommonSubqueryWrapper):
         if name not in self._wrapped._results:
             self._wrapped._results[name] = getattr(parent, name)(megaquery)
         return self._wrapped._results[name]
+
+class AggregateWrapper(ScanSharingWrapper):
+
+    def __getcall__(self, name):
+        if name == "reduce":
+            fn = super(AggregateWrapper, self).__getcall__("aggregate")
+            def ffn(*args, **kwargs):
+                if len(args) != 1:
+                    raise ValueError("%s takes one argument" % name)
+                if len(kwargs) != 0:
+                    raise ValueError("%s does not take keyword arguments" % name)
+                f = args[0]
+                def combOp(a, b):
+                    if a is None and b is None:
+                        return None
+                    if a is None:
+                        return b
+                    if b is None:
+                        return a
+                    return f(a, b)
+                def seqOp(acc, val):
+                    if acc is None:
+                        return val
+                    return f(acc, val)
+                return fn(None, seqOp, combOp)
+            return ffn
+        elif name == "fold":
+            fn = super(AggregateWrapper, self).__getcall__("aggregate")
+            def ffn(*args, **kwargs):
+                if len(args) != 2:
+                    raise ValueError("%s takes two arguments" % name)
+                if len(kwargs) != 0:
+                    raise ValueError("%s does not take keyword arguments" % name)
+                zeroValue, op = args
+                return fn(zeroValue, op, op)
+            return ffn
+        else:
+            return super(AggregateWrapper, self).__getcall__(name)

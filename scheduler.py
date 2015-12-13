@@ -43,7 +43,7 @@ class FlexibleStreamingScheduler():
                 queries = queryparser.get_active_queries()
                 print 'queries:', queries
 
-                lines = wrapper.ScanSharingWrapper(self.sc.textFile(filename))
+                lines = wrapper.AggregateWrapper(self.sc.textFile(filename))
                 #     no minimum line param in case of empty file
                 total = lines.count()
 
