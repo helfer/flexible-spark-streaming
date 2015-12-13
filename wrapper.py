@@ -175,6 +175,7 @@ class ScanSharingWrapper(CommonSubqueryWrapper):
         self._tasks = {
             "map": [],
             "filter": [],
+            "aggregate": [],
         }
 
         # For each optimized action, the "megaresult" produced by running the
@@ -185,11 +186,17 @@ class ScanSharingWrapper(CommonSubqueryWrapper):
         fn = super(ScanSharingWrapper, self).__getcall__(name)
         def ffn(*args, **kwargs):
             if name in self._tasks:
-                if len(args) != 1:
-                    raise ValueError("%s only takes one argument" % name)
+                if name == "aggregate":
+                    if len(args) != 3:
+                        raise ValueError("%s only takes three arguments" % name)
+                    v = args
+                else:
+                    if len(args) != 1:
+                        raise ValueError("%s only takes one argument" % name)
+                    v = args[0]
                 if len(kwargs) != 0:
                     raise ValueError("%s does not take keyword arguments" % name)
-                self._tasks[name].append(args[0])
+                self._tasks[name].append(v)
             return fn(*args, **kwargs)
         return ffn
 
@@ -212,6 +219,24 @@ class ScanSharingWrapper(CommonSubqueryWrapper):
                     name, parent, lambda item: [task(item) for task in tasks])
                 index = self._wrapped._tasks[name].index(args[0])
                 return megaresult.map(lambda item: item[index])
+            elif name == "aggregate":
+                if name not in self._wrapped._results:
+                    zeroValues = [v[0] for v in tasks]
+                    def seqOp(a, b):
+                        result = [None] * len(tasks)
+                        for i in xrange(len(tasks)):
+                            result[i] = tasks[i][1](a[i], b)
+                        return result
+                    def combOp(a, b):
+                        result = [None] * len(tasks)
+                        for i in xrange(len(tasks)):
+                            result[i] = tasks[i][2](a[i], b[i])
+                        return result
+                    self._wrapped._results[name] = parent.aggregate(
+                        zeroValues, seqOp, combOp)
+                    megaresult = self._wrapped._results[name]
+                    index = self._wrapped._tasks[name].index(v)
+                    return megaresult[index]
             else:
                 return getattr(parent, name)(*args, **kwargs)
 
