@@ -1,3 +1,20 @@
+import inspect
+
+def make_hashkey(name, args, kwargs):
+    hn = name
+    ha = []
+    for arg in args:
+        if hasattr(arg, "__call__"):
+            c = [x.cell_contents for x in arg.__closure__] if arg.__closure__ else ()
+            key = (arg.__code__.co_code, tuple(c))
+            ha.append(key)
+        else:
+            ha.append(arg)
+    ha = tuple(ha)
+    hk = frozenset(kwargs.items())
+    return (hn, ha, hk)
+
+
 class Wrapper(object):
 
     def __init__(self, wrapped, deferred=None):
@@ -152,9 +169,14 @@ class CommonSubqueryWrapper(CachingWrapper):
             # Like deferred, hashkey represents a method call performed on the
             # parent object. Unlike deferred, hashkey is hashable.
             deferred = (name, args, kwargs)
-            hashkey = (name, args, frozenset(kwargs.items()))
+            hashkey = make_hashkey(name, args, kwargs)
+            print "hashkey:", hashkey,
             if hashkey not in self._call_cache:
+                print "...new",
                 self._call_cache[hashkey] = self.__class__(self, deferred)
+            else:
+                print "...cached",
+            print self._call_cache[hashkey]
             return self._call_cache[hashkey]
         return fn
 
