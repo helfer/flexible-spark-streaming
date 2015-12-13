@@ -9,10 +9,10 @@ class Query():
 
     # right now matches tweet if ANY of the tags is in the tweet, not all
     def filter(self, tweet):
-      for t in self.tags:
-        if 'text' in tweet and t in tweet['text']:
-          return True
-      return False
+        for t in self.tags:
+            if 'text' in tweet and t in tweet['text']:
+                return True
+        return False
 
 class SimpleQuery():
 
@@ -35,29 +35,29 @@ class SimpleQuery():
             value = field_filter[modifier]
 
             if not field in tweet:
-              return False
+                return False
             if modifier == '_contains':
-              return value in tweet[field]
+                return value in tweet[field]
             elif modifier == '_eq':
-              return value == tweet[field]
+                return value == tweet[field]
             elif modifier == '_neq':
-              return value != tweet[field]
+                return value != tweet[field]
             else:
-              raise Exception("Unsupported modifier in filter: {}".format( modifier ))
+                raise Exception("Unsupported modifier in filter: {}".format( modifier ))
 
     def aggregate(self):
         field = self.select['field']
         agg = self.select['agg']
         if agg == 'count':
-          pass # don't do anything. call 'count'
+            return
         elif agg == 'max':
-          pass # do a reduce a,b -> max(a,b)
+            pass # do a reduce a,b -> max(a,b)
         elif agg == 'min':
-          pass # do a reduce
+            pass # do a reduce
         elif agg == 'sum':
-          pass # do a reduce. if we ever do group by, we'll have to do reduce by key
+            pass # do a reduce. if we ever do group by, we'll have to do reduce by key
         elif agg == 'avg':
-          pass # combineByKey, then calculate average from that.
+            pass # combineByKey, then calculate average from that.
         else:
             raise Exception("Unsupported aggregator in select: {}".format( agg ))
 
@@ -87,5 +87,5 @@ def write_results_to_mongodb( queries, values ):
   t = time.time()
 
   for i,q in enumerate(queries):
-    db.results.insert( { 'query_id': q._id, 'time': t, 'values': [ values[i] ] } )
-    print('>>> value inserted into mongodb for {}: {}'.format(q._id, values[i]))
+      db.results.insert( { 'query_id': q._id, 'time': t, 'values': [ values[i] ] } )
+      print('>>> value inserted into mongodb for {}: {}'.format(q._id, values[i]))
