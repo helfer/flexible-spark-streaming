@@ -64,7 +64,7 @@ class SimpleQuery():
             raise Exception("Unsupported aggregator in select: {}".format( agg ))
 
     def apply(self, source):
-        return self.aggregate(source.filter(self.filter))
+        return self.aggregate(source.map(parse_input).filter(self.filter))
 
 # Here's what a query could look like:
 #
@@ -91,3 +91,6 @@ def write_results_to_mongodb( queries, values ):
   for i,q in enumerate(queries):
       db.results.insert( { 'query_id': q._id, 'time': t, 'values': [ values[i] ] } )
       print('>>> value inserted into mongodb for {}: {}'.format(q._id, values[i]))
+
+def parse_input(i):
+    return json.loads(i) if len(i) > 0 else {}

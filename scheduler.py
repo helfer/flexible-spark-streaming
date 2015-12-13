@@ -27,13 +27,6 @@ class FlexibleStreamingScheduler():
         # START DIRECTORY WATCHER
         self.dw.start()
 
-        #queryparser.init()
-
-        # INITIALIZE
-
-        def parse_input(i):
-            return json.loads(i) if len(i) > 0 else {}
-
         # RUN LOOP
         while True:
             if self.inputs:
@@ -48,9 +41,7 @@ class FlexibleStreamingScheduler():
                 total = lines.count()
 
                 # Loads all URLs from input file and initialize their neighbors.
-                tweets = lines.map(parse_input)
-
-                results = [q.apply(tweets) for q in queries]
+                results = [q.apply(lines) for q in queries]
 
                 total = total.__eval__()
                 counts = [rdd.__eval__() for rdd in results]
