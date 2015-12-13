@@ -50,12 +50,10 @@ class FlexibleStreamingScheduler():
                 # Loads all URLs from input file and initialize their neighbors.
                 tweets = lines.map(parse_input)
 
-                tmp = [] #ugly, but I'm sleepy
-                for q in queries:
-                    tmp.append( tweets.filter(q.filter) )
+                results = [q.apply(tweets) for q in queries]
 
                 total = total.__eval__()
-                counts = [ rdd.count().__eval__() for rdd in tmp ]
+                counts = [rdd.__eval__() for rdd in results]
 
                 for i,c in enumerate(counts):
                     print(">>> %s of %s tweets match the filter: %s." % (c, total, queries[i].where))

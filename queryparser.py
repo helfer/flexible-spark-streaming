@@ -21,7 +21,6 @@ class SimpleQuery():
       self.select = select
       self.where = where
 
-
     # this is very ugly, there's a much nicer way. fix it
     def filter(self, tweet):
         if "_and" in self.where:
@@ -62,6 +61,9 @@ class SimpleQuery():
         else:
             raise Exception("Unsupported aggregator in select: {}".format( agg ))
 
+    def apply(self, source):
+        return source.filter(self.filter).count()
+
 # Here's what a query could look like:
 #
 # SELECT count(id), user.name
@@ -87,7 +89,3 @@ def write_results_to_mongodb( queries, values ):
   for i,q in enumerate(queries):
     db.results.insert( { 'query_id': q._id, 'time': t, 'values': [ values[i] ] } )
     print('>>> value inserted into mongodb for {}: {}'.format(q._id, values[i]))
-
-
-
-
