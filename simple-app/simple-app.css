@@ -12,7 +12,6 @@ body {
 	width: 40%;
 	height: 500px;
 	padding-left:50px;
-	overflow: auto;
 }
 
 #right {
@@ -28,7 +27,7 @@ body {
 #title {
 	text-align: center;
 	color: #81ADC7;
-	margin-bottom:40px;
+	margin-bottom:20px;
 }
 
 h1 {
@@ -114,4 +113,35 @@ h1 {
 
 .currently-running{
     margin-top:50px;
+}
+
+.single-query{
+    font-size: 14px;
+    float: left;
+    width: 400px;
+    padding: 10px;
+    background: #DCE3E8;
+    color: #ACB8BF;
+    position:relative;
+    margin-right: 20px;
+    margin-bottom: 20px;
+    font-family: 'PT Mono', ;
+}
+
+.shadow {
+  -webkit-box-shadow: 2px 2px 2px rgba(0, 0, 0, 0.1);  /* Safari 3-4, iOS 4.0.2 - 4.2, Android 2.3+ */
+  -moz-box-shadow:    2px 2px 2px rgba(0, 0, 0, 0.1);  /* Firefox 3.5 - 3.6 */
+  box-shadow:         2px 2px 2px rgba(0, 0, 0, 0.1);  /* Opera 10.5, IE 9, Firefox 4+, Chrome 6+, iOS 5 */
+}
+
+.x-button{
+    font-size: 20px;
+    position: absolute;
+    top: 5px;
+    right: 10px;
+}
+
+.x-button:hover{
+    color: #80A6BF;
+    cursor: pointer;
 }

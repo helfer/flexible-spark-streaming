@@ -5,6 +5,7 @@
 	<script src="https://code.highcharts.com/modules/exporting.js"></script>
 
 	<link href='https://fonts.googleapis.com/css?family=Lato:400,300' rel='stylesheet' type='text/css'>
+	<link href='https://fonts.googleapis.com/css?family=PT+Mono' rel='stylesheet' type='text/css'>
 </head>
 
 <body>
@@ -61,18 +62,15 @@
 
 	<div class="currently-running">
 		<p>Currently running queries: </p>
-  {{#each currently_running }}
-    <p>
-    <button class="cancel_query" id="{{_id}}">stop</button>
-      <span>SELECT {{select.agg}}({{select.field}}) FROM tweets WHERE text CONTAINS
-        "{{where.text._contains}}"</span>
-    </p>
-  {{/each}}
+		{{#each currently_running }}
+			<div class="single-query shadow">
+				<div class = "x-button cancel_query" id="{{_id}}">✖</div>
+				<span>SELECT {{select.agg}}({{select.field}}) <br />
+					FROM tweets <br />
+					WHERE text CONTAINS "{{where.text._contains}}"</span>
+			</div>
+		{{/each}}
 	</div>
-	<!--
-	<p>You've pressed the button {{counter}} times.</p>
-	<pre>{{ window }}</pre>
-	-->
 
 </template>
 

@@ -25,21 +25,10 @@ var Results = new Meteor.Collection('results');
 
 if (Meteor.isClient) {
 
-    var time = (new Date()).getTime();
-    var initialData = [
-        {x: time - 19000, y:0, cmd: 'top'},
-        {x: time - 18000, y:0, cmd: 'ls'},
-        {x: time - 17000, y:0, cmd: 'top'},
-        {x: time - 16000, y:0, cmd: 'pwd'},
-        {x: time - 15000, y:0, cmd: 'cd'},
-        {x: time - 14000, y:0, cmd: 'vim'},
-        {x: time - 13000, y:0, cmd: 'pwd'},
-    ];
     var chart;
     var series;
-
-    // counter starts at 0
-    //Session.setDefault('counter', 0);
+    var seriesMap = new Object();
+    var seriesMapLastIndex = 0;
 
     Template.interact.helpers({
         currently_running: function() {
@@ -49,7 +38,30 @@ if (Meteor.isClient) {
 
     Template.interact.events({
       'click .cancel_query': function(event,template){
-        Queries.remove({_id: event.target.id});
+        console.log("1");
+        console.log(seriesMap);
+        console.log(seriesMapLastIndex);
+        var id = event.target.id;
+
+        Queries.remove({_id: id});
+
+        var i = seriesMap[id];
+        delete seriesMap[id];
+
+        chart.series[i].remove();
+        seriesMapLastIndex -= 1;
+
+        for(var j = 0; j < chart.series.length; j++) {
+            var thisID = chart.series[j].name;
+            console.log("thisID: " + thisID);
+            seriesMap[thisID] = j;
+        }
+
+        console.log("2");
+        console.log("series: ");
+        console.log(chart.series);
+        console.log(seriesMap);
+        console.log(seriesMapLastIndex);
       }
     });
 
@@ -66,9 +78,19 @@ if (Meteor.isClient) {
               from: 0, //ignored
               where: {text:{ _contains:event.target.query_where_value.value} }
           });
-          console.log('inserted ' + query_id);
+
           Meteor.subscribe('results', query_id );
 
+          seriesMapLastIndex += 1;
+          seriesMap[query_id] = seriesMapLastIndex;
+
+            var thisSeries = {
+                name: query_id,
+                data: []
+            }
+            
+            chart.addSeries(thisSeries, true);
+            
           // all active queries should be listed somewhere
           // (later it should be possible to remove queries ...)
         },
@@ -78,24 +100,20 @@ if (Meteor.isClient) {
         }
     });
 
-    // Start listening changes in Replies
-    Meteor.autosubscribe(function() {
-        Meteor.subscribe('queries');
-        Meteor.subscribe('results');
-    });
-
     // Set an observer to be triggered when Results.insert() is invoked
     Results.find().observe({
         'added': function(item) {
-            //Session.set('', item.message);
-            var x = (new Date()).getTime(), // current time
-            y = item.values[0];
+            var x = (new Date()).getTime(); // current time
+            var y = item.values[0];
 
-            series.addPoint({
+            var s = item.query_id;
+            var index = seriesMap[s];
+
+            chart.series[index].addPoint({
                 x: x,
                 y: y,
                 cmd: item.query_id
-            }, true, true);
+            }, true);
         }
     });
 
@@ -112,21 +130,6 @@ if (Meteor.isClient) {
                 type: 'spline',
                 animation: Highcharts.svg, // don't animate in old IE
                 marginRight: 10
-
-                /*
-                events: {
-                    load: function () {
-
-                        // set up the updating of the chart each second
-                        var series = this.series[0];
-                        setInterval(function () {
-                            var x = (new Date()).getTime(), // current time
-                            y = Math.random();
-                            series.addPoint([x, y], true, true);
-                        }, 1000);
-                    }
-                }
-                */
             },
             title: {
                 text: null
@@ -159,13 +162,35 @@ if (Meteor.isClient) {
                 enabled: false
             },
             series: [{
-                name: 'Random data',
-                data: initialData
+                name: 'Initial Series',
+                data: []
             }]
         });
 
         chart = $('#container-graph').highcharts();
         series = chart.series[0];
+
+        Meteor.subscribe('queries', function() {// callback upon completion
+            var allQueries = Queries.find().fetch();
+            seriesMapLastIndex = allQueries.length - 1;
+
+            for (var i = 0; i < allQueries.length; i++) {
+                seriesMap[allQueries[i]._id] = i;
+
+                Meteor.subscribe('results', allQueries[i]._id );
+
+                var thisSeries = {
+                    name: allQueries[i]._id,
+                    data: []
+                }
+                if (i > 0) {
+                    chart.addSeries(thisSeries, false);
+                }
+            }
+
+            chart.redraw();
+        });
+
     });
 
 }
@@ -189,21 +214,9 @@ if (Meteor.isServer) {
     });
 
     Meteor.methods({
-        /*
-        'command': function(line) {
-            // Run the requested command in shell
-            exec(line, function(error, stdout, stderr) {
-                // Collection commands must be executed within a Fiber
-                Fiber(function() {
-                    Replies.remove({});
-                    Replies.insert({message: stdout ? stdout : stderr,
-                                    cmd: line});
-                }).run();
-            });
-        },
-        */
         'reset': function(){
           Queries.remove({});
+          Results.remove({});
         }
     });
 }
