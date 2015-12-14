@@ -1,5 +1,7 @@
-from pymongo import MongoClient
+import json
 import time
+
+from pymongo import MongoClient
 
 class Query():
     # Super-simple query class, to be expanded
@@ -9,10 +11,10 @@ class Query():
 
     # right now matches tweet if ANY of the tags is in the tweet, not all
     def filter(self, tweet):
-      for t in self.tags:
-        if 'text' in tweet and t in tweet['text']:
-          return True
-      return False
+        for t in self.tags:
+            if 'text' in tweet and t in tweet['text']:
+                return True
+        return False
 
 class SimpleQuery():
 
@@ -21,46 +23,51 @@ class SimpleQuery():
       self.select = select
       self.where = where
 
-
     # this is very ugly, there's a much nicer way. fix it
-    def filter(self, tweet):
+    def filter(self, rdd):
         if "_and" in self.where:
             pass #for now. we'll make this work recursively later
         elif "_or" in self.where:
             pass #for now, we'll make this work recursively later
         else:
             field = self.where.keys()[0]
-
             field_filter = self.where[field]
             modifier = field_filter.keys()[0]
             value = field_filter[modifier]
 
-            if not field in tweet:
-              return False
-            if modifier == '_contains':
-              return value in tweet[field]
-            elif modifier == '_eq':
-              return value == tweet[field]
-            elif modifier == '_neq':
-              return value != tweet[field]
-            else:
-              raise Exception("Unsupported modifier in filter: {}".format( modifier ))
+            def f(tweet):
+                if not field in tweet:
+                    return False
+                if modifier == '_contains':
+                    return value in tweet[field]
+                elif modifier == '_eq':
+                    return value == tweet[field]
+                elif modifier == '_neq':
+                    return value != tweet[field]
+                else:
+                    raise Exception("Unsupported modifier in filter: {}".format( modifier ))
+            return rdd.filter(f)
 
-    def aggregate(self):
+    def aggregate(self, rdd):
         field = self.select['field']
         agg = self.select['agg']
         if agg == 'count':
-          pass # don't do anything. call 'count'
+            return rdd.aggregate(0, lambda acc, _: acc + 1, lambda a, b: a + b)
         elif agg == 'max':
-          pass # do a reduce a,b -> max(a,b)
+            return rdd.reduce(max)
         elif agg == 'min':
-          pass # do a reduce
+            return rdd.reduce(min)
         elif agg == 'sum':
-          pass # do a reduce. if we ever do group by, we'll have to do reduce by key
+            return rdd.reduce(sum)
         elif agg == 'avg':
-          pass # combineByKey, then calculate average from that.
+            n = rdd.reduce(sum)
+            d = rdd.aggregate(0, lambda acc, _: acc + 1, sum)
+            return n / float(d)
         else:
             raise Exception("Unsupported aggregator in select: {}".format( agg ))
+
+    def apply(self, source):
+        return self.aggregate(self.filter(source.map(parse_input)))
 
 # Here's what a query could look like:
 #
@@ -85,9 +92,8 @@ def write_results_to_mongodb( queries, values ):
   t = time.time()
 
   for i,q in enumerate(queries):
-    db.results.insert( { 'query_id': q._id, 'time': t, 'values': [ values[i] ] } )
-    print('>>> value inserted into mongodb for {}: {}'.format(q._id, values[i]))
+      db.results.insert( { 'query_id': q._id, 'time': t, 'values': [ values[i] ] } )
+      print('>>> value inserted into mongodb for {}: {}'.format(q._id, values[i]))
 
-
-
-
+def parse_input(i):
+    return json.loads(i) if len(i) > 0 else {}
