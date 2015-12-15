@@ -27,6 +27,11 @@ def main():
         type=int,
         help="number of queries to run",
         default=1)
+    parser.add_argument(
+        "-s", "--start",
+        type=int,
+        help="number of queries to start with",
+        default=1)
     parser.add_argument('--sample', dest='sample', action='store_true')
     parser.set_defaults(sample=False)
     args = parser.parse_args()
@@ -37,9 +42,12 @@ def main():
         tw = wrapper.ScanSharingWrapper
     elif args.wrapper == 'aggregate':
         tw = wrapper.AggregateWrapper
+    elif args.wrapper == 'plain':
+        tw = wrapper.Wrapper
     else:
         tw = None
     test_wrapper = tw
+    print('wrapper:',tw)
 
     fts = FlexibleTestScheduler()
 
@@ -56,16 +64,16 @@ def main():
         source += 'tweets-1449729650086.txt'
 
     alltimers = []
-    for i in range( 0 ,args.num_queries):
-        timers = fts.run(queries[:i+1], test_wrapper, data_source = source, repetitions = args.repetitions)
+    for i in range( args.start ,args.num_queries+1):
+        timers = fts.run(queries[:i], test_wrapper, data_source = source, repetitions = args.repetitions)
         alltimers.append(timers)
         print( str(i) + '>>>>>>>' )
         print( timers )
 
 
-    print( 'RESULTS >>>>>>>' )
+    print( 'RESULTS >>>>>>>', args.wrapper )
     for i, timers in enumerate(alltimers):
-        print(i+1, args.wrapper, len(timers), sum(timers)/len(timers), timers )
+        print(args.start + i, args.wrapper, len(timers), sum(timers)/len(timers), timers )
 
     print( 'DONE >>>>>>>' )
 

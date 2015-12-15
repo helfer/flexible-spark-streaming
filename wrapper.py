@@ -112,6 +112,7 @@ class Wrapper(object):
             parent = self._wrapped.__eval__()
             # then apply the deferred action
             name, args, kwargs = self._deferred
+            print('running',name)
             return getattr(parent, name)(*args, **kwargs)
 
 class ScanSharingWrapper(Wrapper):
