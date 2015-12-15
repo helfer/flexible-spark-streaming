@@ -114,7 +114,98 @@ class Wrapper(object):
             name, args, kwargs = self._deferred
             return getattr(parent, name)(*args, **kwargs)
 
-class CachingWrapper(Wrapper):
+class ScanSharingWrapper(Wrapper):
+
+    def __init__(self, *args, **kwargs):
+        """
+        Wraps an object and performs scan sharing on a limited set of queries,
+        e.g. map. The wrapper records all deferred map actions called on it. At
+        evaluation time, the first child performs a mega-map consisting of the
+        union of all these map actions. Then each child runs their individual
+        map on this result, which should be an efficiency gain.
+        """
+        super(ScanSharingWrapper, self).__init__(*args, **kwargs)
+
+        # For each optimized action, a list of arguments to be computed, e.g.
+        # self._tasks["map"] is a list of map actions to run.
+        self._tasks = {
+            "map": [],
+            "filter": [],
+            "aggregate": [],
+        }
+
+        # For each optimized action, the "megaresult" produced by running the
+        # megaquery with the actions in the list above.
+        self._results = {}
+
+    def __getcall__(self, name):
+        fn = super(ScanSharingWrapper, self).__getcall__(name)
+        def ffn(*args, **kwargs):
+            if name in self._tasks:
+                if name == "aggregate":
+                    if len(args) != 3:
+                        raise ValueError("%s only takes three arguments" % name)
+                    v = args
+                else:
+                    if len(args) != 1:
+                        raise ValueError("%s only takes one argument" % name)
+                    v = args[0]
+                if len(kwargs) != 0:
+                    raise ValueError("%s does not take keyword arguments" % name)
+                self._tasks[name].append(v)
+            return fn(*args, **kwargs)
+        return ffn
+
+    def __eval__(self):
+        if not self._deferred:
+            return self._wrapped
+
+        name, args, kwargs = self._deferred
+        parent = self._wrapped.__eval__()
+
+        # Bind to a local variable to prevent Spark from trying to pickle self.
+        tasks = self._wrapped._tasks.get(name)
+
+        if name == "filter":
+            megaresult = self.__getmegaresult__(
+                name, parent, lambda item: any(task(item) for task in tasks))
+            return megaresult.filter(*args, **kwargs)
+        elif name == "map":
+            megaresult = self.__getmegaresult__(
+                name, parent, lambda item: [task(item) for task in tasks])
+            index = self._wrapped._tasks[name].index(args[0])
+            return megaresult.map(lambda item: item[index])
+        elif name == "aggregate":
+            if name not in self._wrapped._results:
+                zeroValues = [v[0] for v in tasks]
+                def seqOp(a, b):
+                    result = [None] * len(tasks)
+                    for i in xrange(len(tasks)):
+                        result[i] = tasks[i][1](a[i], b)
+                    return result
+                def combOp(a, b):
+                    result = [None] * len(tasks)
+                    for i in xrange(len(tasks)):
+                        result[i] = tasks[i][2](a[i], b[i])
+                    return result
+                self._wrapped._results[name] = parent.aggregate(
+                    zeroValues, seqOp, combOp)
+            megaresult = self._wrapped._results[name]
+            index = self._wrapped._tasks[name].index(v)
+            return megaresult[index]
+
+        return getattr(parent, name)(*args, **kwargs)
+
+    def __getmegaresult__(self, name, parent, megaquery):
+        """
+        Gets the cached megaresult from the parent. If it hasn't been computed
+        yet, compute, cache and return it.
+        """
+        if name not in self._wrapped._results:
+            self._wrapped._results[name] = getattr(parent, name)(megaquery)
+        return self._wrapped._results[name]
+
+class CachingWrapper(ScanSharingWrapper):
 
     def __init__(self, *args, **kwargs):
         """
@@ -168,109 +259,13 @@ class CommonSubqueryWrapper(CachingWrapper):
         def fn(*args, **kwargs):
             # Like deferred, hashkey represents a method call performed on the
             # parent object. Unlike deferred, hashkey is hashable.
-            deferred = (name, args, kwargs)
             hashkey = make_hashkey(name, args, kwargs)
             if hashkey not in self._call_cache:
-                self._call_cache[hashkey] = self.__class__(self, deferred)
+                self._call_cache[hashkey] = super(CommonSubqueryWrapper, self).__getcall__(name)(*args, **kwargs)
             return self._call_cache[hashkey]
         return fn
 
-class ScanSharingWrapper(CommonSubqueryWrapper):
-
-    def __init__(self, *args, **kwargs):
-        """
-        Wraps an object and performs scan sharing on a limited set of queries,
-        e.g. map. The wrapper records all deferred map actions called on it. At
-        evaluation time, the first child performs a mega-map consisting of the
-        union of all these map actions. Then each child runs their individual
-        map on this result, which should be an efficiency gain.
-        """
-        super(ScanSharingWrapper, self).__init__(*args, **kwargs)
-
-        # For each optimized action, a list of arguments to be computed, e.g.
-        # self._tasks["map"] is a list of map actions to run.
-        self._tasks = {
-            "map": [],
-            "filter": [],
-            "aggregate": [],
-        }
-
-        # For each optimized action, the "megaresult" produced by running the
-        # megaquery with the actions in the list above.
-        self._results = {}
-
-    def __getcall__(self, name):
-        fn = super(ScanSharingWrapper, self).__getcall__(name)
-        def ffn(*args, **kwargs):
-            if name in self._tasks:
-                if name == "aggregate":
-                    if len(args) != 3:
-                        raise ValueError("%s only takes three arguments" % name)
-                    v = args
-                else:
-                    if len(args) != 1:
-                        raise ValueError("%s only takes one argument" % name)
-                    v = args[0]
-                if len(kwargs) != 0:
-                    raise ValueError("%s does not take keyword arguments" % name)
-                self._tasks[name].append(v)
-            return fn(*args, **kwargs)
-        return ffn
-
-    def __eval__(self):
-        if self._cache_present:
-            pass
-        elif not self._deferred:
-            self._cached = self._wrapped
-        else:
-            name, args, kwargs = self._deferred
-            parent = self._wrapped.__eval__()
-
-            # Bind to a local variable to prevent Spark from trying to pickle self.
-            tasks = self._wrapped._tasks.get(name)
-
-            if name == "filter":
-                megaresult = self.__getmegaresult__(
-                    name, parent, lambda item: any(task(item) for task in tasks))
-                self._cached = megaresult.filter(*args, **kwargs)
-            elif name == "map":
-                megaresult = self.__getmegaresult__(
-                    name, parent, lambda item: [task(item) for task in tasks])
-                index = self._wrapped._tasks[name].index(args[0])
-                self._cached = megaresult.map(lambda item: item[index])
-            elif name == "aggregate":
-                if name not in self._wrapped._results:
-                    zeroValues = [v[0] for v in tasks]
-                    def seqOp(a, b):
-                        result = [None] * len(tasks)
-                        for i in xrange(len(tasks)):
-                            result[i] = tasks[i][1](a[i], b)
-                        return result
-                    def combOp(a, b):
-                        result = [None] * len(tasks)
-                        for i in xrange(len(tasks)):
-                            result[i] = tasks[i][2](a[i], b[i])
-                        return result
-                    self._wrapped._results[name] = parent.aggregate(
-                        zeroValues, seqOp, combOp)
-                    megaresult = self._wrapped._results[name]
-                    index = self._wrapped._tasks[name].index(v)
-                    self._cached = megaresult[index]
-            else:
-                self._cached = getattr(parent, name)(*args, **kwargs)
-        self._cache_present = True
-        return self._cached
-
-    def __getmegaresult__(self, name, parent, megaquery):
-        """
-        Gets the cached megaresult from the parent. If it hasn't been computed
-        yet, compute, cache and return it.
-        """
-        if name not in self._wrapped._results:
-            self._wrapped._results[name] = getattr(parent, name)(megaquery)
-        return self._wrapped._results[name]
-
-class AggregateWrapper(ScanSharingWrapper):
+class AggregateWrapper(CommonSubqueryWrapper):
 
     def __getcall__(self, name):
         if name == "reduce":
