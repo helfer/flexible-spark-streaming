@@ -309,5 +309,14 @@ class AggregateWrapper(CommonSubqueryWrapper):
                 zeroValue, op = args
                 return fn(zeroValue, op, op)
             return ffn
+        elif name == "count":
+            fn = super(AggregateWrapper, self).__getcall__("aggregate")
+            def ffn(*args, **kwargs):
+                if len(args) != 0:
+                    raise ValueError("%s takes no arguments" % name)
+                if len(kwargs) != 0:
+                    raise ValueError("%s does not take keyword arguments" % name)
+                return fn(0, lambda acc, _: acc + 1, lambda a, b: a + b)
+            return ffn
         else:
             return super(AggregateWrapper, self).__getcall__(name)

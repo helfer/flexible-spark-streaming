@@ -52,7 +52,7 @@ class SimpleQuery():
         field = self.select['field']
         agg = self.select['agg']
         if agg == 'count':
-            return rdd.aggregate(0, lambda acc, _: acc + 1, lambda a, b: a + b)
+            return rdd.count()
         elif agg == 'max':
             return rdd.reduce(max)
         elif agg == 'min':
