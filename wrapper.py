@@ -166,7 +166,10 @@ class ScanSharingWrapper(Wrapper):
         # Bind to a local variable to prevent Spark from trying to pickle self.
         tasks = self._wrapped._tasks.get(name)
 
-        if name == "filter":
+        if len(self._wrapped._tasks.get(name, "")) <= 1:
+            # disable optimizations
+            pass
+        elif name == "filter":
             megaresult = self.__getmegaresult__(
                 name, parent, lambda item: any(task(item) for task in tasks))
             return megaresult.filter(*args, **kwargs)
