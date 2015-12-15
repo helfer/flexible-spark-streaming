@@ -172,11 +172,13 @@ class ScanSharingWrapper(Wrapper):
         elif name == "filter":
             megaresult = self.__getmegaresult__(
                 name, parent, lambda item: any(task(item) for task in tasks))
+            print "RUN ON MEGARESULT:", name, args, kwargs
             return megaresult.filter(*args, **kwargs)
         elif name == "map":
             megaresult = self.__getmegaresult__(
                 name, parent, lambda item: [task(item) for task in tasks])
             index = self._wrapped._tasks[name].index(args[0])
+            print "RUN ON MEGARESULT:", name, index
             return megaresult.map(lambda item: item[index])
         elif name == "aggregate":
             if name not in self._wrapped._results:
@@ -195,8 +197,10 @@ class ScanSharingWrapper(Wrapper):
                     zeroValues, seqOp, combOp)
             megaresult = self._wrapped._results[name]
             index = self._wrapped._tasks[name].index(v)
+            print "RUN ON MEGARESULT (BYPASSES SPARK):", name, index
             return megaresult[index]
 
+        print "RUN:", name, args, kwargs
         return getattr(parent, name)(*args, **kwargs)
 
     def __getmegaresult__(self, name, parent, megaquery):
@@ -205,6 +209,7 @@ class ScanSharingWrapper(Wrapper):
         yet, compute, cache and return it.
         """
         if name not in self._wrapped._results:
+            print "CALCULATING MEGARESULT:", name, megaquery
             self._wrapped._results[name] = getattr(parent, name)(megaquery)
         return self._wrapped._results[name]
 
