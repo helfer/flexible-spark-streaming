@@ -18,6 +18,10 @@ def main():
         help="which wrapper to use",
         default=None)
     parser.add_argument(
+        "-d", "--dir",
+        help="which data directory to use",
+        default=None)
+    parser.add_argument(
         "-r", "--repetitions",
         type=int,
         help="number of repetitions to run",
@@ -60,6 +64,8 @@ def main():
 
 
     source = './largedata/'
+    if args.dir:
+        source = args.dir
     if args.sample:
         source += 'tweets-1449729650086.txt'
 
