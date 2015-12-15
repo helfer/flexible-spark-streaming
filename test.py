@@ -16,8 +16,9 @@ def main():
     global stop_list
 
     queries = []
-    for i in xrange(10):
-        queries.append(queryparser.SimpleQuery(str(i), {'agg': 'count', 'field': '*'}, {'text': {'_contains': 'happy'}}))
+    queries.append(queryparser.SimpleQuery("HAPPY-1", {'agg': 'count', 'field': '*'}, {'text': {'_contains': 'happy'}}))
+    queries.append(queryparser.SimpleQuery("HAPPY-2", {'agg': 'count', 'field': '*'}, {'text': {'_contains': 'happy'}}))
+    queries.append(queryparser.SimpleQuery("SAD-1", {'agg': 'count', 'field': '*'}, {'text': {'_contains': 'sad'}}))
 
     fss = scheduler.FlexibleStreamingScheduler("test/", test_queries=queries)
     stop_list.append(fss)
