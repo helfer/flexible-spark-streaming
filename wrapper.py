@@ -211,6 +211,7 @@ class ScanSharingWrapper(Wrapper):
         if name not in self._wrapped._results:
             print "CALCULATING MEGARESULT:", name, megaquery
             self._wrapped._results[name] = getattr(parent, name)(megaquery)
+            self._wrapped._results[name].cache()
         return self._wrapped._results[name]
 
 class CachingWrapper(ScanSharingWrapper):
